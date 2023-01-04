@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:oauth2-provider="http://www.mulesoft.org/schema/mule/oauth2-provider"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/oauth2-provider http://www.mulesoft.org/schema/mule/oauth2-provider/current/mule-oauth2-provider.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="8a63e2d3-cf78-41c2-a875-d2e343256c67" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<os:object-store name="client" doc:name="Object store" doc:id="764d4bd1-9321-4252-bddd-ebc23c2438e4" config-ref="ObjectStore_Config"/>
+	<oauth2-provider:config name="OAuth2_Provider_Config" doc:name="OAuth2 Provider Config" doc:id="d64156c8-c2e3-487d-8881-ab0463ec4868" listenerConfig="HTTP_Listener_config" clientStore="client" supportedGrantTypes="CLIENT_CREDENTIALS">
+		<oauth2-provider:client-validation-rate-limiter >
+			<oauth2-provider:period-rate-limiter durationTimeUnit="MINUTES" />
+		</oauth2-provider:client-validation-rate-limiter>
+		<oauth2-provider:token-config tokenStore="TOKEN" />
+	</oauth2-provider:config>
+	<os:object-store name="TOKEN" doc:name="Object store" doc:id="8cb3b0ee-dccd-46cf-b935-40458dda7683" />
+	<os:config name="ObjectStore_Config" doc:name="ObjectStore Config" doc:id="9790cb29-11b2-407c-9358-8b38c10ea35c" >
+		<os:connection >
+			<reconnection >
+				<reconnect />
+			</reconnection>
+		</os:connection>
+	</os:config>
+	<flow name="o-auth-policy-implementationFlow" doc:id="e6266f4e-16df-4b57-9596-a143afbf036d" >
+		<http:listener doc:name="createClient Listener" doc:id="250ca577-1e2e-4227-bf45-97a51f106a5d" config-ref="HTTP_Listener_config" path="/createClient"/>
+		<logger level="INFO" doc:name="Start" doc:id="f726bb5e-ef93-4955-b08b-110b9106590d" message='#["Start"]'/>
+		<oauth2-provider:create-client doc:name="Create client" doc:id="36b60609-d810-4184-90bd-b76e7c13d758" config-ref="OAuth2_Provider_Config" clientId="#[attributes.headers.client_id]" type="CONFIDENTIAL" secret="#[attributes.headers.client_secret]" clientName="#[attributes.headers.client_name]" description='#[""]' authorizedGrantTypes='#[["CLIENT_CREDENTIALS"]]' failIfPresent="true"/>
+		<set-payload value='#["client created with" ++ attributes.headers.client_name as String ++ payload]' doc:name="Set Payload" doc:id="289492bc-3135-4bff-97bd-bdca54cc02b4" />
+		<logger level="INFO" doc:name="End" doc:id="65d8734a-4172-4174-8d5d-a1da5e79d2dc" message='#["End"]'/>
+	</flow>
+	<flow name="o-auth-policy-implementationFlow1" doc:id="96d1a586-98d5-446e-a12d-8067501bd225" >
+		<http:listener doc:name="Listener" doc:id="905a0a25-79ac-4f4d-988d-2241fa7e46b2" config-ref="HTTP_Listener_config" path="/validate"/>
+		<logger level="INFO" doc:name="Start" doc:id="ed9c590b-4f53-4e12-b1b3-b453c1a48483" message='#["Start"]'/>
+		<oauth2-provider:validate-token doc:name="Validate token" doc:id="8169262a-3844-4490-8f73-a2fe73588442" config-ref="OAuth2_Provider_Config"/>
+		<logger level="INFO" doc:name="END" doc:id="00134f2f-d506-4377-864d-6cf318a2d561" message='#["END"]'/>
+	</flow>
+	<!-- <flow name="o-auth-policy-implementationFlow1" doc:id="57d92245-c859-457f-8023-d185f1556977" >
+		<http:listener doc:name="Listener" doc:id="cae77d89-7326-4d64-bfa1-44edf71429da" config-ref="HTTP_Listener_config" path="/validate"/>
+	</flow> -->
+</mule>
